@@ -18,46 +18,59 @@ namespace Microsoft.MixedReality.Toolkit.Input
             }
         }
 
+        private readonly float isInPointingPoseDelayTime = 0.5f;
+        private float currentFrameDelayTargetTime = 0f;
+
+        private bool shouldShowRay;
+
         public bool ShouldShowRay
         {
             get
             {
-                if (headForward.sqrMagnitude < Mathf.Epsilon)
+                UpdatePointingPose();
+                return shouldShowRay;
+            }
+        }
+
+        private void UpdatePointingPose()
+        {
+            bool valid = true;
+
+            if (headForward.sqrMagnitude < Mathf.Epsilon)
+            {
+                valid = false;
+            }
+
+            if (valid && CursorBeamBackwardTolerance >= 0)
+            {
+                Vector3 cameraBackward = -headForward;
+                if (Vector3.Dot(palmNormal.normalized, cameraBackward) > CursorBeamBackwardTolerance)
                 {
-                    return false;
+                    valid = false;
                 }
-                bool valid = true;
-                if (CursorBeamBackwardTolerance >= 0)
+            }
+            if (valid && CursorBeamUpTolerance >= 0)
+            {
+                if (Vector3.Dot(palmNormal, Vector3.up) > CursorBeamUpTolerance)
                 {
-                    Vector3 cameraBackward = -headForward;
-                    if (Vector3.Dot(palmNormal.normalized, cameraBackward) > CursorBeamBackwardTolerance)
-                    {
-                        valid = false;
-                    }
+                    valid = false;
                 }
-                if (valid && CursorBeamUpTolerance >= 0)
+            }
+            if (valid)
+            {
+                Vector3 palmForward = (Quaternion.AngleAxis(-90, Vector3.right) * palmNormal).normalized;
+                if (Vector3.Dot(pointerFingerNormal.normalized, palmForward) < FingerPointedTolerance)
                 {
-                    if (Vector3.Dot(palmNormal, Vector3.up) > CursorBeamUpTolerance)
-                    {
-                        valid = false;
-                    }
-                }
-                if (valid)
-                {
-                    Vector3 palmForward = (Quaternion.AngleAxis(-90, Vector3.right) * palmNormal).normalized;
-                  
-                    for (int i = 0; i < fingertipNormals.Length; i++)
-                    {
-                        if (Vector3.Dot(fingertipNormals[i], palmForward.normalized) > FingerPointedTolerance)
-                        {
-                            return true;
-                        }
-                    }
+                    
                     valid = false;
                 }
 
-                return valid;
+                Debug.Log(valid);
+
+                currentFrameDelayTargetTime = Time.time + isInPointingPoseDelayTime;
             }
+
+            shouldShowRay = Time.time < currentFrameDelayTargetTime;
         }
 
         private Ray ray = new Ray();
@@ -68,7 +81,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
         private const float HeadToPivotOffsetZ = 0.08f;
         private readonly float CursorBeamBackwardTolerance = 0.5f;
         private readonly float CursorBeamUpTolerance = 0.8f;
-        private readonly float FingerPointedTolerance = 0.6f;
+        private readonly float FingerPointedTolerance = 0.9f;
 
 
         // Smoothing factor for ray stabilization
@@ -77,18 +90,18 @@ namespace Microsoft.MixedReality.Toolkit.Input
         private StabilizedRay stabilizedRay = new StabilizedRay(StabilizedRayHalfLife);
         private Vector3 palmNormal;
         private Vector3 headForward;
-        private Vector3[] fingertipNormals;
+        private Vector3 pointerFingerNormal;
 
         #region Public Methods
 
-        public void Update(Vector3 handPosition, Vector3 palmNormal, Transform headTransform, Vector3[] fingertipNormals, Handedness sourceHandedness)
+        public void Update(Vector3 handPosition, Vector3 palmNormal, Transform headTransform, Vector3 pointerFingerNormal, Handedness sourceHandedness)
         {
             Vector3 rayPivotPoint = ComputeRayPivotPosition(handPosition, headTransform, sourceHandedness);
             Vector3 measuredRayPosition = handPosition;
             Vector3 measuredDirection = measuredRayPosition - rayPivotPoint;
             this.palmNormal = palmNormal;
             this.headForward = headTransform.forward;
-            this.fingertipNormals = fingertipNormals;
+            this.pointerFingerNormal = pointerFingerNormal;
 
             stabilizedRay.AddSample(new Ray(measuredRayPosition, measuredDirection));
         }

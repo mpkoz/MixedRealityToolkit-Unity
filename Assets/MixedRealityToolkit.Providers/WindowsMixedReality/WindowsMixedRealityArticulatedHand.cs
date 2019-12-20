@@ -73,73 +73,58 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
 
         #endregion IMixedRealityHand Implementation
 
+        private bool isInPointingPose = false;
+
         public override bool IsInPointingPose
         {
             get
             {
-                bool valid = true;
-#if (UNITY_WSA && DOTNETWINRT_PRESENT) || WINDOWS_UWP
-                Vector3 palmNormal = unityJointOrientations[(int)HandJointKind.Palm] * (-1 * Vector3.up);
-                if (CursorBeamBackwardTolerance >= 0)
-                {
-                    Vector3 cameraBackward = -CameraCache.Main.transform.forward;
-                    if (Vector3.Dot(palmNormal.normalized, cameraBackward.normalized) > CursorBeamBackwardTolerance)
-                    {
-                        valid = false;
-                    }
-                }
-                if (valid && CursorBeamUpTolerance >= 0)
-                {
-                    if (Vector3.Dot(palmNormal.normalized, Vector3.up) > CursorBeamUpTolerance)
-                    {
-                        valid = false;
-                    }
-                }
-                if (valid)
-                {
-                    Vector3 palmForward = (unityJointOrientations[(int)HandJointKind.Palm] * Vector3.forward).normalized;
-
-                    //if (false)
-                    //{
-                    //    Debug.Log("==========");
-                    //    Debug.Log("pf: " + palmForward.x + ", " + palmForward.y + ", " + palmForward.z);
-                    //    Debug.Log(Vector3.Dot((unityJointOrientations[(int)HandJointKind.IndexTip] * Vector3.forward).normalized, palmForward) + ", " +
-                    //        Vector3.Dot((unityJointOrientations[(int)HandJointKind.MiddleTip] * Vector3.forward).normalized, palmForward) + ", " +
-                    //        Vector3.Dot((unityJointOrientations[(int)HandJointKind.RingTip] * Vector3.forward).normalized, palmForward) + ", " +
-                    //        Vector3.Dot((unityJointOrientations[(int)HandJointKind.LittleTip] * Vector3.forward).normalized, palmForward));
-                    //}
-
-
-                    if (Vector3.Dot((unityJointOrientations[(int)HandJointKind.IndexDistal] * Vector3.forward).normalized, palmForward) < FingerPointedTolerance &&
-                        Vector3.Dot((unityJointOrientations[(int)HandJointKind.MiddleDistal] * Vector3.forward).normalized, palmForward) < FingerPointedTolerance &&
-                        Vector3.Dot((unityJointOrientations[(int)HandJointKind.RingDistal] * Vector3.forward).normalized, palmForward) < FingerPointedTolerance &&
-                        Vector3.Dot((unityJointOrientations[(int)HandJointKind.LittleDistal] * Vector3.forward).normalized, palmForward) < FingerPointedTolerance)
-                    {
-                        valid = false;
-                    }
-                }
-
-                if (valid)
-                {
-                    Vector3 palmDiagonal = 
-                        ((unityJointOrientations[(int)HandJointKind.Palm] * -Vector3.right).normalized + 
-                        (unityJointOrientations[(int)HandJointKind.Palm] * Vector3.forward).normalized +
-                        (unityJointOrientations[(int)HandJointKind.Palm] * -Vector3.up).normalized) * 0.3333f;
-
-                    if (Vector3.Dot((unityJointOrientations[(int)HandJointKind.ThumbDistal] * Vector3.forward).normalized, palmDiagonal) < 0.15f)
-                    {
-                        valid = false;
-                    }
-                }
-
-#endif // (UNITY_WSA && DOTNETWINRT_PRESENT) || WINDOWS_UWP
-                return valid;
+                UpdatePointingPose();
+                return isInPointingPose;
             }
         }
 
-        //if palm is palm up
-        //if hand is backwards
-        //
+        private void UpdatePointingPose()
+        {
+            bool valid = true;
+#if (UNITY_WSA && DOTNETWINRT_PRESENT) || WINDOWS_UWP
+
+            Vector3 palmNormal = unityJointOrientations[(int)HandJointKind.Palm] * (-1 * Vector3.up);
+            if (CursorBeamBackwardTolerance >= 0)
+            {
+                Vector3 cameraBackward = -CameraCache.Main.transform.forward;
+                if (Vector3.Dot(palmNormal.normalized, cameraBackward.normalized) > CursorBeamBackwardTolerance)
+                {
+                    valid = false;
+                }
+            }
+            if (valid && CursorBeamUpTolerance >= 0)
+            {
+                if (Vector3.Dot(palmNormal.normalized, Vector3.up) > CursorBeamUpTolerance)
+                {
+                    valid = false;
+                }
+            }
+
+            if (valid)
+            {
+                Vector3 palmForward = (unityJointOrientations[(int)HandJointKind.Palm] * Vector3.forward).normalized;
+                if (Vector3.Dot((unityJointOrientations[(int)HandJointKind.IndexIntermediate] * Vector3.forward).normalized, palmForward) < FingerPointedTolerance)
+                {
+                    valid = false;
+                }
+            }
+
+            if (valid)
+            {
+                currentFrameDelayTargetTime = Time.time + isInPointingPoseDelayTime;
+            }
+
+            isInPointingPose = Time.time < currentFrameDelayTargetTime;
+#else
+            isInPointingPose = valid;
+#endif // (UNITY_WSA && DOTNETWINRT_PRESENT) || WINDOWS_UWP
+        }
 
 #if UNITY_WSA
 #if WINDOWS_UWP || DOTNETWINRT_PRESENT
@@ -171,12 +156,15 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
 
         private readonly float CursorBeamBackwardTolerance = 0.5f;
         private readonly float CursorBeamUpTolerance = 0.8f;
-        private readonly float FingerPointedTolerance = 0.15f;
+        private readonly float FingerPointedTolerance = 0.4f;
+
+        private readonly float isInPointingPoseDelayTime = 0.1f;
+        private float currentFrameDelayTargetTime = 0f;
 
         private readonly bool articulatedHandApiAvailable = false;
 #endif // WINDOWS_UWP || DOTNETWINRT_PRESENT
 
-        #region Update data functions
+#region Update data functions
 
         /// <summary>
         /// Update the controller data from the provided platform state
@@ -409,7 +397,7 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
 #endif // WINDOWS_UWP || DOTNETWINRT_PRESENT
         }
 
-        #endregion Update data functions
+#endregion Update data functions
 
 #if WINDOWS_UWP || DOTNETWINRT_PRESENT
         private static readonly HandJointKind[] jointIndices = new HandJointKind[]
@@ -489,7 +477,7 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
             }
         }
 
-        #region Protected InputSource Helpers
+#region Protected InputSource Helpers
 
         protected void UpdateCurrentIndexPose()
         {
@@ -499,7 +487,7 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
             currentIndexPose.Position = (unityJointPositions[(int)HandJointKind.IndexTip] + skinOffsetFromBone);
         }
 
-        #endregion Private InputSource Helpers
+#endregion Private InputSource Helpers
 
 #endif // WINDOWS_UWP || DOTNETWINRT_PRESENT
 #endif // UNITY_WSA

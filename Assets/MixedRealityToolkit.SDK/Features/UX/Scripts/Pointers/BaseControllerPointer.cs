@@ -472,7 +472,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
         /// <inheritdoc />
         public override void OnInputUp(InputEventData eventData)
         {
-            if(!IsInteractionEnabled) { return; }
+            if(!IsSelectPressed && !IsInteractionEnabled) { return; }
 
             base.OnInputUp(eventData);
 

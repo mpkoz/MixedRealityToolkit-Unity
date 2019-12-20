@@ -141,7 +141,17 @@ namespace Microsoft.MixedReality.Toolkit.Input
         {
             base.OnPostSceneQuery();
 
+            //Mikozlow
+
             bool isEnabled = IsInteractionEnabled;
+
+            if (!isEnabled)
+            {
+                isEnabled = IsSelectPressed;
+            }
+
+            //Debug.Log(IsInteractionEnabled + ", " + IsSelectPressed);
+
             LineBase.enabled = isEnabled;
             BaseCursor?.SetVisibility(isEnabled);
 
