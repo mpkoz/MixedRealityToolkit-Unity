@@ -18,8 +18,8 @@ namespace Microsoft.MixedReality.Toolkit.Input
             }
         }
 
-        private readonly float isInPointingPoseDelayTime = 0.5f;
-        private float currentFrameDelayTargetTime = 0f;
+        private readonly float IsInPointingPoseDelayTime = 0.06f;
+        private float currentPointingPoseDelayTime = 0f;
 
         private bool shouldShowRay;
 
@@ -41,6 +41,8 @@ namespace Microsoft.MixedReality.Toolkit.Input
                 valid = false;
             }
 
+            // Check if palm is facing in the same general direction as the head
+            // A palm facing the head does not indicate that the user wishes to point
             if (valid && CursorBeamBackwardTolerance >= 0)
             {
                 Vector3 cameraBackward = -headForward;
@@ -49,6 +51,9 @@ namespace Microsoft.MixedReality.Toolkit.Input
                     valid = false;
                 }
             }
+
+            // Check if palm is facing up or down
+            // An upwards-facing palm dowes not indicate the user wishes to point
             if (valid && CursorBeamUpTolerance >= 0)
             {
                 if (Vector3.Dot(palmNormal, Vector3.up) > CursorBeamUpTolerance)
@@ -56,6 +61,9 @@ namespace Microsoft.MixedReality.Toolkit.Input
                     valid = false;
                 }
             }
+
+            // Check if index finger forward is in the same general direction as the palm forward 
+            // A fist/curled pointer finger does not indicate that the user wishes to point
             if (valid)
             {
                 Vector3 palmForward = (Quaternion.AngleAxis(-90, Vector3.right) * palmNormal).normalized;
@@ -64,13 +72,18 @@ namespace Microsoft.MixedReality.Toolkit.Input
                     
                     valid = false;
                 }
-
-                Debug.Log(valid);
-
-                currentFrameDelayTargetTime = Time.time + isInPointingPoseDelayTime;
             }
 
-            shouldShowRay = Time.time < currentFrameDelayTargetTime;
+            // A short time delay preventing false negatives
+            // When the user makes a grabbing gesture, sometimes the ray turns off via the previous check before the grab is completed
+            if (valid)
+            {
+                currentPointingPoseDelayTime = Time.time + IsInPointingPoseDelayTime;
+            }
+
+            valid = Time.time < currentPointingPoseDelayTime;
+
+            shouldShowRay = valid;
         }
 
         private Ray ray = new Ray();

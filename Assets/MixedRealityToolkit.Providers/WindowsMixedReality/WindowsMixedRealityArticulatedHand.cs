@@ -89,7 +89,11 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
             bool valid = true;
 #if (UNITY_WSA && DOTNETWINRT_PRESENT) || WINDOWS_UWP
 
+            // Perpendicular vector pointing away from palm.
             Vector3 palmNormal = unityJointOrientations[(int)HandJointKind.Palm] * (-1 * Vector3.up);
+
+            // Check if palm is facing in the same general direction as the head
+            // A palm facing the head does not indicate that the user wishes to point
             if (CursorBeamBackwardTolerance >= 0)
             {
                 Vector3 cameraBackward = -CameraCache.Main.transform.forward;
@@ -98,6 +102,9 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
                     valid = false;
                 }
             }
+
+            // Check if palm is facing up or down
+            // An upwards-facing palm dowes not indicate the user wishes to point
             if (valid && CursorBeamUpTolerance >= 0)
             {
                 if (Vector3.Dot(palmNormal.normalized, Vector3.up) > CursorBeamUpTolerance)
@@ -106,8 +113,11 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
                 }
             }
 
+            // Check if index finger forward is in the same general direction as the palm forward 
+            // A fist/curled pointer finger does not indicate that the user wishes to point
             if (valid)
             {
+                // Vector pointing forward from palm, towards the fingers
                 Vector3 palmForward = (unityJointOrientations[(int)HandJointKind.Palm] * Vector3.forward).normalized;
                 if (Vector3.Dot((unityJointOrientations[(int)HandJointKind.IndexIntermediate] * Vector3.forward).normalized, palmForward) < FingerPointedTolerance)
                 {
@@ -115,15 +125,18 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
                 }
             }
 
+            // A short time delay preventing false negatives
+            // When the user makes a grabbing gesture, sometimes the ray turns off via the previous check before the grab is completed
             if (valid)
             {
-                currentFrameDelayTargetTime = Time.time + isInPointingPoseDelayTime;
+                currentPointingPoseDelayTime = Time.time + IsInPointingPoseDelayTime;
             }
 
-            isInPointingPose = Time.time < currentFrameDelayTargetTime;
-#else
-            isInPointingPose = valid;
+            valid = Time.time < currentPointingPoseDelayTime;
+
 #endif // (UNITY_WSA && DOTNETWINRT_PRESENT) || WINDOWS_UWP
+
+            isInPointingPose = valid;
         }
 
 #if UNITY_WSA
@@ -157,9 +170,9 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
         private readonly float CursorBeamBackwardTolerance = 0.5f;
         private readonly float CursorBeamUpTolerance = 0.8f;
         private readonly float FingerPointedTolerance = 0.4f;
-
-        private readonly float isInPointingPoseDelayTime = 0.1f;
-        private float currentFrameDelayTargetTime = 0f;
+    
+        private readonly float IsInPointingPoseDelayTime = 0.06f;
+        private float currentPointingPoseDelayTime = 0f;
 
         private readonly bool articulatedHandApiAvailable = false;
 #endif // WINDOWS_UWP || DOTNETWINRT_PRESENT
