@@ -101,6 +101,16 @@ namespace Microsoft.MixedReality.Toolkit.Input
             return Vector3.zero;
         }
 
+        protected Vector3 GetPointerFingerNormal()
+        {
+            if (TryGetJoint(TrackedHandJoint.IndexMiddleJoint, out MixedRealityPose pose))
+            {
+                return pose.Forward;
+            }
+
+            return Vector3.zero;
+        }
+
         private float DistanceSqrPointToLine(Vector3 lineStart, Vector3 lineEnd, Vector3 point)
         {
             if (lineStart == lineEnd)

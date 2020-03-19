@@ -54,7 +54,7 @@ namespace Microsoft.MixedReality.Toolkit.Input
 
             if (IsPositionAvailable)
             {
-                HandRay.Update(pointerPosition, GetPalmNormal(), CameraCache.Main.transform, ControllerHandedness);
+                HandRay.Update(pointerPosition, GetPalmNormal(), GetPointerFingerNormal(), CameraCache.Main.transform, ControllerHandedness);
 
                 Ray ray = HandRay.Ray;
 

@@ -121,6 +121,12 @@ namespace Microsoft.MixedReality.Toolkit.Input
             base.OnPostSceneQuery();
 
             bool isEnabled = IsInteractionEnabled;
+
+            if (!isEnabled)
+            {
+                isEnabled = IsSelectPressed;
+            }
+
             LineBase.enabled = isEnabled;
             if (BaseCursor != null)
             {
